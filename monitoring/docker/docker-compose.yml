@@ -1,0 +1,49 @@
+version: "3.7"
+
+services:
+  influxdb:
+    image: influxdb:1.8
+    container_name: influxdb
+    ports:
+      - "8086:8086"
+    env_file:
+      - "./config/env.influxdb"
+    volumes:
+      - influxdb:/var/lib/influxdb
+      - "./config/influxdb.conf:/etc/influxdb/influxdb.conf:ro"
+
+  grafana-enterprise:
+    image: grafana/grafana-enterprise:10.1.4
+    container_name: grafana-enterprise
+    ports:
+      - "3000:3000"
+    env_file:
+      - "./config/env.grafana"
+    links:
+      - influxdb
+    volumes:
+      - grafana-enterprise:/var/lib/grafana
+
+  grafana-oss:
+    image: grafana/grafana-oss:10.1.4
+    container_name: grafana-oss
+    ports:
+      - "4000:3000"
+    env_file:
+      - "./config/env.grafana"
+    links:
+      - influxdb
+    volumes:
+      - grafana-oss:/var/lib/grafana
+
+networks:
+  default:
+    name: monitoring
+
+volumes:
+  grafana-enterprise:
+    name: pytest-grafana-enterprise
+  grafana-oss:
+    name: pytest-grafana-oss
+  influxdb:
+    name: pytest-influxdb
