@@ -20,11 +20,6 @@ class PytestObject:
 
     @property
     def build_name(self):
-
-        build_name = opts.build_name,
-        build_number = opts.build_number,
-        parent_build_name = opts.parent_build_name,
-        parent_build_number = opts.parent_build_number
         return self._item.config.getoption('build_name', '')
 
     @property
