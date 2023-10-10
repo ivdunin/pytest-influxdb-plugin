@@ -1,10 +1,17 @@
 import logging
+from typing import Dict
 
 import pytest
+from _pytest.nodes import Item
+from _pytest.reports import CollectReport
+from _pytest.stash import StashKey
 
 from pytest_influxdb_plugin.idb_client import IDBClient
+from pytest_influxdb_plugin.pytest_object import PytestObject
 
 logger = logging.getLogger(__name__)
+report_key = StashKey[Dict[str, CollectReport]]()
+call_key = StashKey[Dict[str, CollectReport]]()
 
 
 def pytest_addoption(parser):
@@ -24,21 +31,38 @@ def pytest_addoption(parser):
     group_idb_tags.addoption('--parent-build-name', dest='parent_build_name', help='CI parent build name')
 
 
-@pytest.fixture(name='idb_client', scope='session', autouse=True)
-def fixture_idb_client(request):
-    """ Fixture which initialize InfluxDB client and create database if it doesn't exist """
-    opt = request.config.option
+def pytest_configure(config: pytest.Config):
+    opts = config.option
 
-    if opt.idb_host != '':
+    if opts.idb_host:
+        client = IDBClient(host=opts.idb_host, port=opts.idb_port,
+                           database=opts.idb_db, user=opts.idb_user, password=opts.idb_password)
 
-        client = IDBClient(host=opt.idb_host,
-                           port=opt.idb_port,
-                           database=opt.idb_db,
-                           user=opt.idb_user,
-                           password=opt.idb_password)
+        config._influxdb_client = client
 
-        yield client
 
+def pytest_unconfigure(config: pytest.Config):
+    client: IDBClient = getattr(config, '_influxdb_client', None)
+    if client:
         client.close_connection()
-    else:
-        yield
+
+
+@pytest.hookimpl(tryfirst=True, hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    outcome = yield
+    report = outcome.get_result()
+    item.stash.setdefault(report_key, {})[report.when] = report
+    item.stash.setdefault(call_key, {})[report.when] = call
+
+
+@pytest.hookimpl(trylast=True, hookwrapper=True)
+def pytest_runtest_protocol(item: Item, nextitem: Item):
+    yield
+
+    client: IDBClient = getattr(item.config, '_influxdb_client', None)
+    if client:
+        reports = item.stash[report_key]
+        calls = item.stash[call_key]
+
+        data = PytestObject(item, reports, calls).to_dict()
+        client.write_point(data)

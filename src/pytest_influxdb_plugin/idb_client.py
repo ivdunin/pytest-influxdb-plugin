@@ -1,4 +1,5 @@
 import logging
+from typing import List
 
 import requests
 from influxdb import InfluxDBClient
@@ -45,17 +46,18 @@ class IDBClient:
     def _check_if_database_exists(self, database_name: str) -> bool:
         """ Check if database exists """
         try:
-            for db in self._client.get_list_database():
-                if db['name'] == database_name:
-                    return True
-            return False
+            return {'name': database_name} in self._client.get_list_database()
         except requests.exceptions.ConnectionError as e:
             raise IDBClientException(f'Cannot get list of databases: {e}')
 
     def close_connection(self):
         """ Close connection to InfluxDB database """
         if self._client:
+            logger.info('Close connection')
             self._client.close()
+
+    def write_point(self, point: List[dict]):
+        self._client.write_points(points=point)
 
     @property
     def client(self):
