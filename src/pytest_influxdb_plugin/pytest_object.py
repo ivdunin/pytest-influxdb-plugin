@@ -35,14 +35,6 @@ class PytestObject:
         else:
             return ''
 
-    @property
-    def test_name(self):
-        """ Return test name based on options """
-        if self._item.config.getoption('use_original_name', False):
-            return self._item.originalname
-        else:
-            return self._item.nodeid
-
     def _get_test_markers(self) -> str:
         """ Get sorted comma string of markers assigned to test """
         markers = set()
@@ -101,7 +93,10 @@ class PytestObject:
     def _get_test_status(self) -> Tuple[str, str]:
         """ Return test statuses for pytest and allure """
         if self._reports[SETUP].failed:
-            return 'error', 'broken'
+            if self._calls[SETUP].excinfo.typename == 'AssertionError':
+                return 'error', 'failed'
+            else:
+                return 'error', 'broken'
         elif CALL not in self._reports:
             if not self._is_xfail():
                 return 'skipped', 'skipped'
@@ -117,7 +112,14 @@ class PytestObject:
                 if self._is_xfail():
                     return 'xpassed', 'passed'
                 else:
-                    return 'passed', 'passed'
+                    # If test passed, but teardown failed, allure marked such tests as failed/broken
+                    if self._reports[TEARDOWN].failed:
+                        if self._calls[TEARDOWN].excinfo.typename == 'AssertionError':
+                            return 'passed', 'failed'
+                        else:
+                            return 'passed', 'broken'
+                    else:
+                        return 'passed', 'passed'
             if self._reports[CALL].skipped:
                 return 'xfailed', 'skipped'
 
@@ -132,7 +134,8 @@ class PytestObject:
         duration_teardown = self._get_duration(TEARDOWN)
 
         tags = {
-            'test': self.test_name,
+            'test': self._item.originalname,
+            'nodeid': self._item.nodeid,
             'status': pytest_status,
             'allure_status': allure_status,
             'failed_stage': self._get_failed_stages(),

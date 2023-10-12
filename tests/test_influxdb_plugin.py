@@ -3,7 +3,7 @@ def test_help_message(testdir):
         '--help',
     )
     result.stdout.fnmatch_lines([
-        'influxdb-plugin:',
+        'InfluxDB Configuration:',
         '*--influx-host=IDB_HOST',
         '*InfluxDB host',
         '*--influx-port=IDB_PORT',
@@ -13,9 +13,8 @@ def test_help_message(testdir):
         '*--influx-password=IDB_PASSWORD',
         '*InfluxDB password',
         '*--influx-db=IDB_DB*InfluxDB database name',
-        '*--use-original-name*Use original test name instead of node name.',
         '',
-        'influxdb-tags:',
+        'Additional tags for tests:',
         '*--build-number=BUILD_NUMBER',
         '*CI build number',
         '*--build-name=BUILD_NAME',
