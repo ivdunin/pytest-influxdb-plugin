@@ -21,14 +21,14 @@ setup(
     license='MIT',
     url='https://github.com/ivdunin/pytest-influxdb-plugin',
     description='A plugin to send metrics into Influxdb',
-    long_description=read('README.md'),
+    long_description=read('README.rst'),
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     keywords='pytest, plugin, testing, metrics, statistics, InfluxDB, database, time-series',
     python_requires='>=3.7',
     install_requires=[
         'influxdb>=5.3',
-        'pytest>=6.2.0'
+        'pytest>=7.0'
     ],
     classifiers=[
         'Development Status :: 4 - Beta',
@@ -37,10 +37,11 @@ setup(
         'Topic :: Software Development :: Testing',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: 3 :: Only',
         'Programming Language :: Python :: Implementation :: CPython',
         'Programming Language :: Python :: Implementation :: PyPy',
