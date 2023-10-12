@@ -93,7 +93,10 @@ class PytestObject:
     def _get_test_status(self) -> Tuple[str, str]:
         """ Return test statuses for pytest and allure """
         if self._reports[SETUP].failed:
-            return 'error', 'broken'
+            if self._calls[SETUP].excinfo.typename == 'AssertionError':
+                return 'error', 'failed'
+            else:
+                return 'error', 'broken'
         elif CALL not in self._reports:
             if not self._is_xfail():
                 return 'skipped', 'skipped'
@@ -109,7 +112,14 @@ class PytestObject:
                 if self._is_xfail():
                     return 'xpassed', 'passed'
                 else:
-                    return 'passed', 'passed'
+                    # If test passed, but teardown failed, allure marked such tests as failed/broken
+                    if self._reports[TEARDOWN].failed:
+                        if self._calls[TEARDOWN].excinfo.typename == 'AssertionError':
+                            return 'passed', 'failed'
+                        else:
+                            return 'passed', 'broken'
+                    else:
+                        return 'passed', 'passed'
             if self._reports[CALL].skipped:
                 return 'xfailed', 'skipped'
 
