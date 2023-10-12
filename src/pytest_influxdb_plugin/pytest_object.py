@@ -124,7 +124,7 @@ class PytestObject:
         duration_teardown = self._get_duration(TEARDOWN)
 
         tags = {
-            'test_originalname': self._item.originalname,
+            'test': self._item.originalname,
             'nodeid': self._item.nodeid,
             'status': pytest_status,
             'allure_status': allure_status,
