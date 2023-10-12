@@ -35,14 +35,6 @@ class PytestObject:
         else:
             return ''
 
-    @property
-    def test_name(self):
-        """ Return test name based on options """
-        if self._item.config.getoption('use_original_name', False):
-            return self._item.originalname
-        else:
-            return self._item.nodeid
-
     def _get_test_markers(self) -> str:
         """ Get sorted comma string of markers assigned to test """
         markers = set()
@@ -132,7 +124,8 @@ class PytestObject:
         duration_teardown = self._get_duration(TEARDOWN)
 
         tags = {
-            'test': self.test_name,
+            'test_originalname': self._item.originalname,
+            'nodeid': self._item.nodeid,
             'status': pytest_status,
             'allure_status': allure_status,
             'failed_stage': self._get_failed_stages(),
