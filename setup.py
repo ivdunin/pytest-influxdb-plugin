@@ -21,7 +21,7 @@ setup(
     license='MIT',
     url='https://github.com/ivdunin/pytest-influxdb-plugin',
     description='A plugin to send metrics into Influxdb',
-    long_description=read('README.rst'),
+    long_description=read('README.md'),
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     keywords='pytest, plugin, testing, metrics, statistics, InfluxDB, database, time-series',
