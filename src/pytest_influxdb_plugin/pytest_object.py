@@ -6,7 +6,7 @@ from _pytest.nodes import Item
 
 logger = logging.getLogger(__name__)
 
-EMPTY_VALUE = 'n/a'
+EMPTY_VALUE = 'N/A'
 SETUP = 'setup'
 CALL = 'call'
 TEARDOWN = 'teardown'
@@ -42,10 +42,7 @@ class PytestObject:
             if mark.name not in ('filterwarnings', 'parametrize', 'skip', 'skipif', 'usefixtures', 'xfail'):
                 markers.add(mark.name)
 
-        if markers:
-            return ','.join(sorted(markers))
-        else:
-            return EMPTY_VALUE
+        return ','.join(sorted(markers))
 
     def _is_xfail(self):
         """ Check if test xfail """
@@ -80,10 +77,7 @@ class PytestObject:
                                            (self._reports[stage].skipped and self._is_xfail())):
                 failed_stages.append(stage)
 
-        if failed_stages:
-            return ','.join(failed_stages)
-        else:
-            return EMPTY_VALUE
+        return ','.join(failed_stages)
 
     def _get_test_params(self):
         """ Get test params as dash string """
@@ -134,6 +128,11 @@ class PytestObject:
 
     def to_dict(self) -> List[dict]:
         """ Get metrics for influxdb """
+        def validate_tags(_tags: dict):
+            for k, v in _tags.items():
+                if not v.strip():
+                    _tags[k] = EMPTY_VALUE
+
         pytest_status, allure_status = self._get_test_status()
         duration_setup = self._get_duration(SETUP)
         duration_call = self._get_duration(CALL)
@@ -150,6 +149,8 @@ class PytestObject:
             'parent_build_name': self.parent_build_name,
             'parent_build_number': self.parent_build_number
         }
+
+        validate_tags(tags)
 
         fields = {
             'duration_setup': duration_setup,
