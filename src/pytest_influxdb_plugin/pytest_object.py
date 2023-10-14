@@ -20,20 +20,19 @@ class PytestObject:
 
     @property
     def build_name(self):
-        return self._item.config.getoption('build_name', '')
+        return self._item.config.getoption('build_name', 'none')
 
     @property
     def build_number(self):
-        return self._item.config.getoption('build_number', '')
+        return self._item.config.getoption('build_number', 0)
 
     @property
-    def parent_build(self):
-        parent_build_name = self._item.config.getoption('parent_build_name')
-        parent_build_number = self._item.config.getoption('parent_build_number')
-        if parent_build_name and parent_build_number:
-            return f'{parent_build_name} #{parent_build_number}'
-        else:
-            return ''
+    def parent_build_name(self):
+        return self._item.config.getoption('parent_build_name', 'none')
+
+    @property
+    def parent_build_number(self):
+        return self._item.config.getoption('parent_build_number', 0)
 
     def _get_test_markers(self) -> str:
         """ Get sorted comma string of markers assigned to test """
@@ -135,15 +134,14 @@ class PytestObject:
 
         tags = {
             'test': self._item.originalname,
-            'nodeid': self._item.nodeid,
             'status': pytest_status,
             'allure_status': allure_status,
             'failed_stage': self._get_failed_stages(),
             'markers': self._get_test_markers(),
-            'params': self._get_test_params(),
             'build_number': self.build_number,
             'build_name': self.build_name,
-            'parent_build': self.parent_build
+            'parent_build_name': self.parent_build_name,
+            'parent_build_number': self.parent_build_number
         }
 
         fields = {
@@ -152,6 +150,8 @@ class PytestObject:
             'duration_teardown': duration_teardown,
             'duration_total': duration_setup + duration_call + duration_teardown,
             'exception': self._get_exceptions(),
+            'nodeid': self._item.nodeid,
+            'params': self._get_test_params(),
         }
 
         json_body = [

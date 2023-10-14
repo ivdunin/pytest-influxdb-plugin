@@ -17,18 +17,16 @@ call_key = StashKey[Dict[str, CollectReport]]()
 def pytest_addoption(parser):
     group_influx = parser.getgroup('influxdb-plugin', description='InfluxDB Configuration')
     group_influx.addoption('--influx-host', dest='idb_host', type=str, default='', help='InfluxDB host')
-    group_influx.addoption('--influx-port', dest='idb_port', default=8086, help='InfluxDB port')
+    group_influx.addoption('--influx-port', dest='idb_port', type=int, default=8086, help='InfluxDB port')
     group_influx.addoption('--influx-user', dest='idb_user', default='', help='InfluxDB user')
     group_influx.addoption('--influx-password', dest='idb_password', default='', help='InfluxDB password')
     group_influx.addoption('--influx-db', dest='idb_db', default='pytest-influxdb', help='InfluxDB database name')
 
     group_idb_tags = parser.getgroup('influxdb-tags', description='Additional tags for tests')
-    group_idb_tags.addoption('--build-number', dest='build_number', default='', help='CI build number')
-    group_idb_tags.addoption('--build-name', dest='build_name', default='', help='CI build name')
-    group_idb_tags.addoption('--parent-build-number', dest='parent_build_number', default='',
-                             help='CI parent build number')
-    group_idb_tags.addoption('--parent-build-name', dest='parent_build_name', default='',
-                             help='CI parent build name')
+    group_idb_tags.addoption('--build-number', dest='build_number', help='CI build number')
+    group_idb_tags.addoption('--build-name', dest='build_name', help='CI build name')
+    group_idb_tags.addoption('--parent-build-number', dest='parent_build_number', help='CI parent build number')
+    group_idb_tags.addoption('--parent-build-name', dest='parent_build_name', help='CI parent build name')
 
 
 def pytest_configure(config: pytest.Config):
