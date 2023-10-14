@@ -6,6 +6,7 @@ from _pytest.nodes import Item
 
 logger = logging.getLogger(__name__)
 
+EMPTY_VALUE = 'n/a'
 SETUP = 'setup'
 CALL = 'call'
 TEARDOWN = 'teardown'
@@ -20,7 +21,7 @@ class PytestObject:
 
     @property
     def build_name(self):
-        return self._item.config.getoption('build_name', 'none')
+        return self._item.config.getoption('build_name', EMPTY_VALUE)
 
     @property
     def build_number(self):
@@ -28,7 +29,7 @@ class PytestObject:
 
     @property
     def parent_build_name(self):
-        return self._item.config.getoption('parent_build_name', 'none')
+        return self._item.config.getoption('parent_build_name', EMPTY_VALUE)
 
     @property
     def parent_build_number(self):
@@ -41,7 +42,10 @@ class PytestObject:
             if mark.name not in ('filterwarnings', 'parametrize', 'skip', 'skipif', 'usefixtures', 'xfail'):
                 markers.add(mark.name)
 
-        return ','.join(sorted(markers))
+        if markers:
+            return ','.join(sorted(markers))
+        else:
+            return EMPTY_VALUE
 
     def _is_xfail(self):
         """ Check if test xfail """
@@ -76,7 +80,10 @@ class PytestObject:
                                            (self._reports[stage].skipped and self._is_xfail())):
                 failed_stages.append(stage)
 
-        return ','.join(failed_stages)
+        if failed_stages:
+            return ','.join(failed_stages)
+        else:
+            return EMPTY_VALUE
 
     def _get_test_params(self):
         """ Get test params as dash string """
