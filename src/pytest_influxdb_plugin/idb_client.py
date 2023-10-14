@@ -1,8 +1,9 @@
 import logging
 from typing import List
 
-import requests
 from influxdb import InfluxDBClient
+from influxdb.exceptions import InfluxDBClientError
+from requests import RequestException
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +18,7 @@ class IDBClientException(Exception):
 class IDBClient:
     def __init__(self, host: str, port: int = 8086,
                  database: str = 'pytest-influxdb', user: str = '', password: str = ''):
-        self._client = InfluxDBClient(host=host, port=port, username=user, password=password)
+        self._client = InfluxDBClient(host=host, port=port, username=user, password=password, timeout=10)
         self._switch_database(database_name=database)
 
     def __enter__(self):
@@ -40,24 +41,31 @@ class IDBClient:
 
             self._client.switch_database(database_name)
             logger.info(f'Database switched to: {database_name}')
-        except requests.exceptions.ConnectionError as e:
+        except (RequestException, InfluxDBClientError) as e:
             raise IDBClientException(f'Cannot switch database: {e}')
 
     def _check_if_database_exists(self, database_name: str) -> bool:
         """ Check if database exists """
         try:
             return {'name': database_name} in self._client.get_list_database()
-        except requests.exceptions.ConnectionError as e:
+        except (RequestException, InfluxDBClientError) as e:
             raise IDBClientException(f'Cannot get list of databases: {e}')
 
     def close_connection(self):
         """ Close connection to InfluxDB database """
         if self._client:
             logger.info('Close connection')
-            self._client.close()
+            try:
+                self._client.close()
+            except (RequestException, InfluxDBClientError) as e:
+                raise IDBClientException(f'Cannot close connection: {e}')
 
     def write_point(self, point: List[dict]):
-        self._client.write_points(points=point)
+        """ Write point to database """
+        try:
+            self._client.write_points(points=point)
+        except (RequestException, InfluxDBClientError) as e:
+            raise IDBClientException(f'Cannot write point to database: {e}')
 
     @property
     def client(self):

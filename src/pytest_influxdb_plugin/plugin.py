@@ -6,7 +6,7 @@ from _pytest.nodes import Item
 from _pytest.reports import CollectReport
 from _pytest.stash import StashKey
 
-from pytest_influxdb_plugin.idb_client import IDBClient
+from pytest_influxdb_plugin.idb_client import IDBClient, IDBClientException
 from pytest_influxdb_plugin.pytest_object import PytestObject
 
 logger = logging.getLogger(__name__)
@@ -21,6 +21,8 @@ def pytest_addoption(parser):
     group_influx.addoption('--influx-user', dest='idb_user', default='', help='InfluxDB user')
     group_influx.addoption('--influx-password', dest='idb_password', default='', help='InfluxDB password')
     group_influx.addoption('--influx-db', dest='idb_db', default='pytest-influxdb', help='InfluxDB database name')
+    group_influx.addoption('--raise-influxdb-errors', action='store_true',
+                           help='Raise InfluxDB exceptions. Default: suppress exceptions')
 
     group_idb_tags = parser.getgroup('influxdb-tags', description='Additional tags for tests')
     group_idb_tags.addoption('--build-number', dest='build_number', help='CI build number')
@@ -30,19 +32,34 @@ def pytest_addoption(parser):
 
 
 def pytest_configure(config: pytest.Config):
+    """ Configure InfluxDB
+
+    If idb_host variable exists init InfluxDB client and store it in global namespace
+    """
     opts = config.option
 
     if opts.idb_host:
-        client = IDBClient(host=opts.idb_host, port=opts.idb_port,
-                           database=opts.idb_db, user=opts.idb_user, password=opts.idb_password)
+        try:
+            client = IDBClient(host=opts.idb_host, port=opts.idb_port,
+                               database=opts.idb_db, user=opts.idb_user, password=opts.idb_password)
 
-        config._influxdb_client = client
+            pytest._influxdb_client = client
+        except IDBClientException as e:
+            logger.error(f'Cannot create InfluxDB connection: {e}')
+            if opts.raise_influxdb_errors:
+                raise e
 
 
 def pytest_unconfigure(config: pytest.Config):
-    client: IDBClient = getattr(config, '_influxdb_client', None)
+    """ At the end of test session close connection to InfluxDB """
+    client: IDBClient = getattr(pytest, '_influxdb_client', None)
     if client:
-        client.close_connection()
+        try:
+            client.close_connection()
+        except IDBClientException as e:
+            logger.error(f'Cannot close connection: {e}')
+            if config.option.raise_influxdb_errors:
+                raise e
 
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
@@ -57,10 +74,16 @@ def pytest_runtest_makereport(item, call):
 def pytest_runtest_protocol(item: Item, nextitem: Item):
     yield
 
-    client: IDBClient = getattr(item.config, '_influxdb_client', None)
+    client: IDBClient = getattr(pytest, '_influxdb_client', None)
     if client:
         reports = item.stash[report_key]
         calls = item.stash[call_key]
 
-        data = PytestObject(item, reports, calls).to_dict()
-        client.write_point(data)
+        try:
+            data = PytestObject(item, reports, calls).to_dict()
+            client.write_point(data)
+        except IDBClientException as e:
+            logger.error(f'Cannot write point for test: {item.nodeid}.\nReason: {e}')
+            if item.config.option.raise_influxdb_errors:
+                raise e
+

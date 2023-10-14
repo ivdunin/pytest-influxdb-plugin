@@ -13,6 +13,8 @@ def test_help_message(testdir):
         '*--influx-password=IDB_PASSWORD',
         '*InfluxDB password',
         '*--influx-db=IDB_DB*InfluxDB database name',
+        '*--raise-influxdb-errors',
+        '*Raise InfluxDB exceptions. Default: suppress exceptions',
         '',
         'Additional tags for tests:',
         '*--build-number=BUILD_NUMBER',

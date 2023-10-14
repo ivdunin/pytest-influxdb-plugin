@@ -1,7 +1,7 @@
 import logging
 from typing import Dict, Tuple, List
 
-from _pytest import python, reports, runner
+from _pytest import reports, runner
 from _pytest.nodes import Item
 
 logger = logging.getLogger(__name__)
@@ -14,9 +14,9 @@ STAGES = [SETUP, CALL, TEARDOWN]
 
 class PytestObject:
     def __init__(self, item: Item, report: Dict[str, reports.TestReport], call: Dict[str, runner.CallInfo]):
-        self._item = item
-        self._reports = report
-        self._calls = call
+        self._item: Item = item
+        self._reports: Dict[str, reports.TestReport] = report
+        self._calls: Dict[str, runner.CallInfo] = call
 
     @property
     def build_name(self):
@@ -125,7 +125,7 @@ class PytestObject:
         logger.error(f'Unknown status for test: {self._item.originalname} ({self._item.nodeid})')
         return 'unknown', 'unknown'
 
-    def to_dict(self, **kwargs) -> List[dict]:
+    def to_dict(self) -> List[dict]:
         """ Get metrics for influxdb """
         pytest_status, allure_status = self._get_test_status()
         duration_setup = self._get_duration(SETUP)
