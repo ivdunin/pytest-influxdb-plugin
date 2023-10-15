@@ -128,10 +128,15 @@ class PytestObject:
 
     def to_dict(self) -> List[dict]:
         """ Get metrics for influxdb """
-        def validate_tags(_tags: dict):
-            for k, v in _tags.items():
-                if not v.strip():
-                    _tags[k] = EMPTY_VALUE
+        def validate_point(_tags_or_fields: dict, replace_empty: bool = True):
+            """ Replace empty values with N/A and cast value to str """
+            for k, v in _tags_or_fields.items():
+                if not v or (isinstance(v, str) and not v.strip()):
+                    if replace_empty:
+                        _tags_or_fields[k] = EMPTY_VALUE
+                elif not isinstance(v, (str, int, float)):
+                    logger.debug(f'Tag value: {v} should be a type: "str|int|float". Casting to "str".')
+                    _tags_or_fields[k] = str(v)
 
         pytest_status, allure_status = self._get_test_status()
         duration_setup = self._get_duration(SETUP)
@@ -150,7 +155,7 @@ class PytestObject:
             'parent_build_number': self.parent_build_number
         }
 
-        validate_tags(tags)
+        validate_point(tags)
 
         fields = {
             'duration_setup': duration_setup,
@@ -161,6 +166,8 @@ class PytestObject:
             'nodeid': self._item.nodeid,
             'params': self._get_test_params(),
         }
+
+        validate_point(fields, replace_empty=False)
 
         json_body = [
             {
