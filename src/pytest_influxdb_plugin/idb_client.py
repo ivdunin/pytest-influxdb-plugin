@@ -1,14 +1,15 @@
 import logging
+from json import dumps
+from time import monotonic_ns
 from typing import List
 
 from influxdb import InfluxDBClient
 from influxdb.exceptions import InfluxDBClientError
 from requests import RequestException
 
-logger = logging.getLogger(__name__)
+from pytest_influxdb_plugin.constants import RETENTION_POLICY_NAME, RETENTION_POLICY_DURATION
 
-RETENTION_POLICY_NAME = '90days'
-RETENTION_POLICY_DURATION = '90d'
+logger = logging.getLogger(__name__)
 
 
 class IDBClientException(Exception):
@@ -17,9 +18,13 @@ class IDBClientException(Exception):
 
 class IDBClient:
     def __init__(self, host: str, port: int = 8086,
-                 database: str = 'pytest-influxdb', user: str = '', password: str = ''):
+                 database: str = 'pytest-influxdb', user: str = '', password: str = '',
+                 dry_run: bool = False):
+
         self._client = InfluxDBClient(host=host, port=port, username=user, password=password, timeout=10)
-        self._switch_database(database_name=database)
+
+        if not dry_run:
+            self._switch_database(database_name=database)
 
     def __enter__(self):
         return self
@@ -60,10 +65,14 @@ class IDBClient:
             except (RequestException, InfluxDBClientError) as e:
                 raise IDBClientException(f'Cannot close connection: {e}')
 
-    def write_point(self, point: List[dict]):
+    def write_point(self, point: List[dict], dry_run: bool = False):
         """ Write point to database """
         try:
-            self._client.write_points(points=point)
+            if dry_run:
+                with open(f'influxdb_metrics_{monotonic_ns()}.json', 'w') as f:
+                    f.write(dumps(point, indent=4))
+            else:
+                self._client.write_points(points=point)
         except (RequestException, InfluxDBClientError) as e:
             raise IDBClientException(f'Cannot write point to database: {e}')
 

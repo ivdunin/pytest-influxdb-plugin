@@ -1,16 +1,13 @@
 import logging
+from collections.abc import Iterable
 from typing import Dict, Tuple, List
 
 from _pytest import reports, runner
 from _pytest.nodes import Item
 
-logger = logging.getLogger(__name__)
+from pytest_influxdb_plugin.constants import EMPTY_VALUE, STAGES, SETUP, CALL, TEARDOWN
 
-EMPTY_VALUE = 'N/A'
-SETUP = 'setup'
-CALL = 'call'
-TEARDOWN = 'teardown'
-STAGES = [SETUP, CALL, TEARDOWN]
+logger = logging.getLogger(__name__)
 
 
 class PytestObject:
@@ -20,20 +17,12 @@ class PytestObject:
         self._calls: Dict[str, runner.CallInfo] = call
 
     @property
-    def build_name(self):
+    def build_name(self) -> str:
         return self._item.config.getoption('build_name', EMPTY_VALUE)
 
     @property
-    def build_number(self):
+    def build_number(self) -> int:
         return self._item.config.getoption('build_number', 0)
-
-    @property
-    def parent_build_name(self):
-        return self._item.config.getoption('parent_build_name', EMPTY_VALUE)
-
-    @property
-    def parent_build_number(self):
-        return self._item.config.getoption('parent_build_number', 0)
 
     def _get_test_markers(self) -> str:
         """ Get sorted comma string of markers assigned to test """
@@ -126,14 +115,16 @@ class PytestObject:
         logger.error(f'Unknown status for test: {self._item.originalname} ({self._item.nodeid})')
         return 'unknown', 'unknown'
 
-    def to_dict(self) -> List[dict]:
-        """ Get metrics for influxdb """
+    def to_dict(self, extra_tags: dict = None, extra_fields: dict = None) -> List[dict]:
+        """ Get metrics for influxdb based on test values """
         def validate_point(_tags_or_fields: dict, replace_empty: bool = True):
             """ Replace empty values with N/A and cast value to str """
             for k, v in _tags_or_fields.items():
                 if not v or (isinstance(v, str) and not v.strip()):
                     if replace_empty:
                         _tags_or_fields[k] = EMPTY_VALUE
+                    elif isinstance(v, Iterable):  # Empty iterable we will replace with empty string in any case.
+                        _tags_or_fields[k] = ''
                 elif not isinstance(v, (str, int, float)):
                     logger.debug(f'Tag value: {v} should be a type: "str|int|float". Casting to "str".')
                     _tags_or_fields[k] = str(v)
@@ -151,11 +142,7 @@ class PytestObject:
             'markers': self._get_test_markers(),
             'build_number': self.build_number,
             'build_name': self.build_name,
-            'parent_build_name': self.parent_build_name,
-            'parent_build_number': self.parent_build_number
         }
-
-        validate_point(tags)
 
         fields = {
             'duration_setup': duration_setup,
@@ -167,6 +154,13 @@ class PytestObject:
             'params': self._get_test_params(),
         }
 
+        if extra_tags:
+            tags.update(extra_tags)
+
+        if extra_fields:
+            fields.update(extra_fields)
+
+        validate_point(tags)
         validate_point(fields, replace_empty=False)
 
         json_body = [

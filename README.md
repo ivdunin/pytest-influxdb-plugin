@@ -25,3 +25,5 @@ $ pip install pytest-influxdb-plugin
 ## Limitations
 If you use `pytester`, you will get more test metrics than in pytest report. As tests which run inside `pytester` 
 will generate separate metrics.
+
+TODO: test with xdist rerunfailures timeout
